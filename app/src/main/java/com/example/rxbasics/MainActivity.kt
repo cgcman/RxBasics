@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import io.reactivex.*
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
 import java.lang.Exception
@@ -28,12 +29,19 @@ class MainActivity : AppCompatActivity() {
         // Example 10, 11  - /// backpressure* on example 10 The example code might result in OutOfMemoryException if the device is not top notch. on the 11 exmaple
         // in order to handle the backpressure in this situation, we will convert it to Flowable.
         ///////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Example 12, 13, 14  - /// emiters*
+        // Example 12, 13, 14, 15 - /// emiters*
         // 12 Floable - It works exactly like an Observable but it supports Backpressure.
         // 13 Maybe - return a single optional value. If there is an emitted value, it calls onSuccess , if there’s no value, it calls onComplete or if there’s an error, it calls onError.
         // 14 Single - If we use this class and there is a value emitted, onSuccess will be called. If there’s no value, onError will be called.
         // 15 Completable - The same of Single, but a completable won’t emit any data.
-        runExamples(15)
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Example 16 - /// transform*
+        // With a transformer we can avoid repeating some code by applying the most commonly used chains among your Observable,
+        // we’ll be chaining subscribeOn and observeOn to a couple of Observable below.
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        // operators*
+        // Example 17 - map() Transforms values emitted by an Observable stream into a single value.
+        runExamples(17)
     }
 
     private fun runExamples(num: Int){
@@ -146,6 +154,25 @@ class MainActivity : AppCompatActivity() {
                     { error -> Log.d(TAG, "Ejemplo "+num +" - Completable Error: $error") }
                 )
             }
+            16 -> {
+                Observable.just("Apple", "Orange", "Banana")
+                    .compose(applyObservableAsync())
+                    .subscribe { value -> Log.d(TAG, "Ejemplo "+num +" - Primer Obs: $value") }
+
+                Observable.just("Water", "Fire", "Wood")
+                    .compose(applyObservableAsync())
+                    .subscribe { value -> Log.d(TAG, "Ejemplo "+num +" - Segundo Obs: $value") }
+            }
+            17 -> {
+                Observable.just("Apple", "Banana", "Pera")
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .map { m -> m + " 2" }
+                    .subscribe(
+                        { value -> Log.d(TAG, "Ejemplo "+num +" - Recived: $value") }, //onNext method
+                        { error -> Log.d(TAG, "Ejemplo "+num +" - Error: $error")}, // onError method
+                        { Log.d(TAG, "Ejemplo "+num +" - COMPLETADO")})
+            }
         }
     }
 
@@ -158,6 +185,14 @@ class MainActivity : AppCompatActivity() {
                 emitter.onNext(kind)
             }
             emitter.onComplete()
+        }
+    }
+
+    fun <T> applyObservableAsync(): ObservableTransformer<T, T> {
+        return ObservableTransformer { observable ->
+            observable
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
         }
     }
 }
